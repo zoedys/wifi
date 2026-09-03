@@ -173,7 +173,6 @@
                              </div>
                         </div>
                         
-                        <!-- Form Ubah Username & Password Pelanggan -->
                         <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                             <h3 class="font-bold text-gray-800 mb-4"><i class="fa-solid fa-lock text-brimo-blue mr-2"></i>Ubah Username & Sandi</h3>
                             <form id="form-member-credentials" class="space-y-4">
@@ -580,6 +579,11 @@
     </div>
 
     <script type="module">
+        // =====================================================================
+        // WAJIB GANTI: Masukkan URL Web App Apps Script Anda di sini!
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbw6q7_-NkjU7NJMXW1oZg4rzQIFrTFgwNnykwcjXcUsvjgMXVpeycVFDtZYH_vstNk/exec";
+        // =====================================================================
+
         let currentUserRole = null;
         let currentUserId = null;
         const currentMonth = "2026-09";
@@ -587,13 +591,26 @@
         window.globalAppData = { admin: { username: 'admin', password: '1234' }, users: [], packages: [], bills: [], promos: [], upgradeRequests: [] };
         const formatIDR = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
+        // API Fetch System - Mengirim data murni lewat Fetch (Tidak lagi butuh google.script.run)
+        async function sendDataToGAS(action, data) {
+            try {
+                fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Supaya aman dari blokir CORS
+                    body: JSON.stringify({ action: action, data: data })
+                });
+            } catch (e) {
+                console.error("Gagal simpan ke database:", e);
+            }
+        }
+
         const api = {
-            syncAdmin: () => { if(typeof google!=='undefined' && google.script) google.script.run.syncAdmin(window.globalAppData.admin); },
-            syncUsers: () => { if(typeof google!=='undefined' && google.script) google.script.run.syncUsers(window.globalAppData.users); },
-            syncPackages: () => { if(typeof google!=='undefined' && google.script) google.script.run.syncPackages(window.globalAppData.packages); },
-            syncBills: () => { if(typeof google!=='undefined' && google.script) google.script.run.syncBills(window.globalAppData.bills); },
-            syncPromos: () => { if(typeof google!=='undefined' && google.script) google.script.run.syncPromos(window.globalAppData.promos); },
-            syncRequests: () => { if(typeof google!=='undefined' && google.script) google.script.run.syncRequests(window.globalAppData.upgradeRequests); }
+            syncAdmin: () => sendDataToGAS('syncAdmin', window.globalAppData.admin),
+            syncUsers: () => sendDataToGAS('syncUsers', window.globalAppData.users),
+            syncPackages: () => sendDataToGAS('syncPackages', window.globalAppData.packages),
+            syncBills: () => sendDataToGAS('syncBills', window.globalAppData.bills),
+            syncPromos: () => sendDataToGAS('syncPromos', window.globalAppData.promos),
+            syncRequests: () => sendDataToGAS('syncRequests', window.globalAppData.upgradeRequests)
         };
 
         function initApp() {
@@ -601,36 +618,35 @@
                 document.getElementById('loading-overlay').style.display = 'none';
                 document.getElementById('login-view').classList.remove('hidden');
                 window.showToast('Gagal memuat Database. Masuk mode lokal.', 'error');
-            }, 5000);
+            }, 8000);
 
-            if (typeof google !== 'undefined' && google.script) {
-                google.script.run
-                    .withSuccessHandler(function(data) {
-                        clearTimeout(failsafe); 
-                        window.globalAppData = data;
-                        if(!window.globalAppData.users) window.globalAppData.users = [];
-                        if(!window.globalAppData.bills) window.globalAppData.bills = [];
-                        if(!window.globalAppData.promos) window.globalAppData.promos = [];
-                        if(!window.globalAppData.upgradeRequests) window.globalAppData.upgradeRequests = [];
-                        if(!window.globalAppData.packages) window.globalAppData.packages = [];
-                        
-                        document.getElementById('loading-overlay').style.display = 'none';
-                        document.getElementById('login-view').classList.remove('hidden');
-                    })
-                    .withFailureHandler(function(error) {
-                        clearTimeout(failsafe);
-                        window.showToast('Koneksi Database Gagal', 'error');
-                        document.getElementById('loading-overlay').style.display = 'none';
-                        document.getElementById('login-view').classList.remove('hidden');
-                    })
-                    .getInitialData();
-            } else {
-                setTimeout(() => {
-                    clearTimeout(failsafe);
+            if (GAS_URL === "URL_APPS_SCRIPT_ANDA_DI_SINI") {
+                clearTimeout(failsafe);
+                document.getElementById('loading-overlay').innerHTML = `<div class="p-8 text-center text-red-600 font-bold bg-white rounded-xl shadow-lg border-2 border-red-500 max-w-sm m-auto">ERROR: Harap Edit File index.html di GitHub dan Masukkan GAS_URL Anda di baris ke-584!</div>`;
+                return;
+            }
+
+            // Menyedot JSON dari Apps Script REST API
+            fetch(GAS_URL)
+                .then(response => response.json())
+                .then(data => {
+                    clearTimeout(failsafe); 
+                    window.globalAppData = data;
+                    if(!window.globalAppData.users) window.globalAppData.users = [];
+                    if(!window.globalAppData.bills) window.globalAppData.bills = [];
+                    if(!window.globalAppData.promos) window.globalAppData.promos = [];
+                    if(!window.globalAppData.upgradeRequests) window.globalAppData.upgradeRequests = [];
+                    if(!window.globalAppData.packages) window.globalAppData.packages = [];
+                    
                     document.getElementById('loading-overlay').style.display = 'none';
                     document.getElementById('login-view').classList.remove('hidden');
-                }, 800);
-            }
+                })
+                .catch(error => {
+                    clearTimeout(failsafe);
+                    window.showToast('Koneksi Database Gagal', 'error');
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    document.getElementById('login-view').classList.remove('hidden');
+                });
         }
 
         document.getElementById('login-form').addEventListener('submit', (e) => {
@@ -773,7 +789,6 @@
             const idEl = document.getElementById('mem-setting-id');
             if(idEl) idEl.textContent = 'ID: ' + me.id;
 
-            // Fitur isi otomatis data Username & Password milik Klien di Setelan
             const memUserInput = document.getElementById('mem-new-username');
             const memPassInput = document.getElementById('mem-new-password');
             if (memUserInput) memUserInput.value = me.username || '';
@@ -824,7 +839,6 @@
             
             const me = window.globalAppData.users.find(u => u.id === currentUserId);
             if(me) {
-                // Pengecekan agar username tidak kembar dengan pelanggan lain
                 const isTaken = window.globalAppData.users.some(u => u.username === newUsername && u.id !== currentUserId);
                 if (isTaken) return window.showToast('Gagal: Username sudah digunakan orang lain!', 'error');
 
