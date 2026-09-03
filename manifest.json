@@ -7,7 +7,7 @@
   "theme_color": "#00529C",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2885/2885417.png",
+      "src": "./logo-zoedys.png",
       "sizes": "512x512",
       "type": "image/png"
     }
