@@ -4,8 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Zoedys Net Mobile</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- KODE PWA & LOGO BARU ANDA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00529C">
     <link rel="apple-touch-icon" href="./logo-zoedys.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
@@ -53,8 +59,6 @@
         .toast-enter { animation: slideDown 0.3s ease-out forwards; }
         @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
- <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#00529C">   
 </head>
 <body class="antialiased text-gray-800">
     <div class="app-container" id="app-wrapper">
@@ -583,7 +587,7 @@
     <script type="module">
         // =====================================================================
         // WAJIB GANTI: Masukkan URL Web App Apps Script Anda di sini!
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbw6q7_-NkjU7NJMXW1oZg4rzQIFrTFgwNnykwcjXcUsvjgMXVpeycVFDtZYH_vstNk/exec";
+        const GAS_URL = "URL_APPS_SCRIPT_ANDA_DI_SINI";
         // =====================================================================
 
         let currentUserRole = null;
@@ -593,12 +597,11 @@
         window.globalAppData = { admin: { username: 'admin', password: '1234' }, users: [], packages: [], bills: [], promos: [], upgradeRequests: [] };
         const formatIDR = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
-        // API Fetch System - Mengirim data murni lewat Fetch (Tidak lagi butuh google.script.run)
         async function sendDataToGAS(action, data) {
             try {
                 fetch(GAS_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Supaya aman dari blokir CORS
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ action: action, data: data })
                 });
             } catch (e) {
@@ -624,11 +627,10 @@
 
             if (GAS_URL === "URL_APPS_SCRIPT_ANDA_DI_SINI") {
                 clearTimeout(failsafe);
-                document.getElementById('loading-overlay').innerHTML = `<div class="p-8 text-center text-red-600 font-bold bg-white rounded-xl shadow-lg border-2 border-red-500 max-w-sm m-auto">ERROR: Harap Edit File index.html di GitHub dan Masukkan GAS_URL Anda di baris ke-584!</div>`;
+                document.getElementById('loading-overlay').innerHTML = `<div class="p-8 text-center text-red-600 font-bold bg-white rounded-xl shadow-lg border-2 border-red-500 max-w-sm m-auto">ERROR: Harap Edit File index.html di GitHub dan Masukkan GAS_URL Anda di baris ke-593!</div>`;
                 return;
             }
 
-            // Menyedot JSON dari Apps Script REST API
             fetch(GAS_URL)
                 .then(response => response.json())
                 .then(data => {
@@ -1544,8 +1546,7 @@
         });
 
         document.addEventListener('DOMContentLoaded', initApp);
-    </script>
-    <script>
+        
         // Daftarkan PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
