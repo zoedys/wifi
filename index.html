@@ -53,6 +53,8 @@
         .toast-enter { animation: slideDown 0.3s ease-out forwards; }
         @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
+ <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00529C">   
 </head>
 <body class="antialiased text-gray-800">
     <div class="app-container" id="app-wrapper">
@@ -1542,6 +1544,14 @@
         });
 
         document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+    <script>
+        // Daftarkan PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js');
+            });
+        }
     </script>
 </body>
 </html>
