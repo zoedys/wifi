@@ -1047,23 +1047,47 @@
                 window.openModal('modal-add-user');
             };
 
-        window.submitAddUser = function() {
-            const u = {
-                id: document.getElementById('add-id').value, name: document.getElementById('add-name').value,
-                address: document.getElementById('add-address').value, phone: document.getElementById('add-phone').value,
-                packageId: document.getElementById('add-pkg').value, username: document.getElementById('add-phone').value, password: '123'
-            };
-            if(!u.name || !u.address) return window.showToast('Lengkapi form', 'error');
-            window.globalAppData.users.push(u);
-            const p = window.globalAppData.packages.find(x => x.id === u.packageId);
-            // Menambahkan u.id agar setiap ID tagihan otomatis unik untuk tiap orang
-            window.globalAppData.bills.push({ id: `INV-${u.id}-${Date.now().toString().slice(-4)}`, userId: u.id, month: currentMonth, amount: p ? p.price : 150000, status: 'unpaid' });
-            
-            api.syncUsers(); api.syncBills();
-            window.showToast('Pelanggan ditambah', 'success');
-            window.closeModal('modal-add-user');
-            renderData();
-        };
+window.submitAddUser = function() {
+    // 1. Ambil ID dari form HTML
+    let userIdValue = document.getElementById('add-id').value.trim();
+    
+    // 2. JURU KUNCI: Jika ID di form ternyata kosong, ciptakan ID baru di balik layar saat ini juga!
+    if (!userIdValue) {
+        userIdValue = `USR-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
+    const u = {
+        id: userIdValue, 
+        name: document.getElementById('add-name').value,
+        address: document.getElementById('add-address').value, 
+        phone: document.getElementById('add-phone').value,
+        packageId: document.getElementById('add-pkg').value, 
+        username: document.getElementById('add-phone').value, 
+        password: '123'
+    };
+    
+    if(!u.name || !u.address) return window.showToast('Lengkapi form', 'error');
+    window.globalAppData.users.push(u);
+    
+    const p = window.globalAppData.packages.find(x => x.id === u.packageId);
+    
+    // 3. Buat Tagihan Baru yang ID-nya kebal duplikat (menggabungkan ID User + Waktu)
+    const newBillId = `INV-${userIdValue}-${Date.now().toString().slice(-4)}`;
+    
+    window.globalAppData.bills.push({ 
+        id: newBillId, 
+        userId: userIdValue, // Pasti terisi ID yang benar
+        month: currentMonth, 
+        amount: p ? p.price : 150000, 
+        status: 'unpaid' 
+    });
+    
+    api.syncUsers(); 
+    api.syncBills();
+    window.showToast('Pelanggan ditambah', 'success');
+    window.closeModal('modal-add-user');
+    renderData();
+};
 
         window.selectedUserId = null;
         window.showUserDetail = function(id) {
