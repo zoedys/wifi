@@ -1034,14 +1034,18 @@
             } else { window.showToast('Gagal memuat sistem PDF', 'error'); }
         };
 
-        window.openAddUserModal = function() {
-            document.getElementById('add-id').value = `USR-${Math.floor(1000 + Math.random() * 9000)}`;
-            document.getElementById('form-add-user').reset();
-            const pkgSel = document.getElementById('add-pkg');
-            pkgSel.innerHTML = '';
-            window.globalAppData.packages.forEach(p => pkgSel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
-            window.openModal('modal-add-user');
-        };
+            window.openAddUserModal = function() {
+                // 1. Bersihkan dulu form-nya dari data sisa
+                document.getElementById('form-add-user').reset();
+                
+                // 2. Baru generate dan masukkan ID Pelanggan yang baru
+                document.getElementById('add-id').value = `USR-${Math.floor(1000 + Math.random() * 9000)}`;
+                
+                const pkgSel = document.getElementById('add-pkg');
+                pkgSel.innerHTML = '';
+                window.globalAppData.packages.forEach(p => pkgSel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+                window.openModal('modal-add-user');
+            };
 
         window.submitAddUser = function() {
             const u = {
