@@ -1033,27 +1033,55 @@
                 html2pdf().set(opt).from(printArea).save().then(() => window.showToast('Kwitansi berhasil diunduh!', 'success'));
             } else { window.showToast('Gagal memuat sistem PDF', 'error'); }
         };
+        window.openAddUserModal = function() {
+    // 1. Bersihkan form terlebih dahulu
+    document.getElementById('form-add-user').reset();
 
-            window.openAddUserModal = function() {
-                // 1. Bersihkan dulu form-nya dari data sisa
-                document.getElementById('form-add-user').reset();
-                
-                // 2. Baru generate dan masukkan ID Pelanggan yang baru
-                document.getElementById('add-id').value = `USR-${Math.floor(1000 + Math.random() * 9000)}`;
-                
-                const pkgSel = document.getElementById('add-pkg');
-                pkgSel.innerHTML = '';
-                window.globalAppData.packages.forEach(p => pkgSel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
-                window.openModal('modal-add-user');
-            };
+    // 2. LOGIKA ID BERURUTAN
+    let nextId = "USR-1001"; // Nilai awal jika database masih kosong
+    const users = window.globalAppData.users;
+    
+    if (users && users.length > 0) {
+        let maxNum = 0;
+        users.forEach(u => {
+            // Hanya proses ID yang berawalan "USR-"
+            if (u.id && u.id.startsWith('USR-')) {
+                let num = parseInt(u.id.replace('USR-', ''), 10);
+                if (!isNaN(num) && num > maxNum) maxNum = num;
+            }
+        });
+        // Jika menemukan angka, tambahkan 1
+        if (maxNum > 0) {
+            nextId = `USR-${String(maxNum + 1).padStart(4, '0')}`;
+        }
+    }
+
+    // 3. Masukkan ID berurutan tersebut ke dalam kotak form
+    document.getElementById('add-id').value = nextId;
+
+    const pkgSel = document.getElementById('add-pkg');
+    pkgSel.innerHTML = '';
+    window.globalAppData.packages.forEach(p => pkgSel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+    window.openModal('modal-add-user');
+};
+
 
 window.submitAddUser = function() {
-    // 1. Ambil ID dari form HTML
     let userIdValue = document.getElementById('add-id').value.trim();
-    
-    // 2. JURU KUNCI: Jika ID di form ternyata kosong, ciptakan ID baru di balik layar saat ini juga!
+
+    // BACKUP: Jika kotak ID di HTML terhapus/kosong, buat lagi ID berurutannya di belakang layar
     if (!userIdValue) {
-        userIdValue = `USR-${Math.floor(1000 + Math.random() * 9000)}`;
+        let maxNum = 0;
+        const users = window.globalAppData.users;
+        if (users && users.length > 0) {
+            users.forEach(u => {
+                if (u.id && u.id.startsWith('USR-')) {
+                    let num = parseInt(u.id.replace('USR-', ''), 10);
+                    if (!isNaN(num) && num > maxNum) maxNum = num;
+                }
+            });
+        }
+        userIdValue = maxNum > 0 ? `USR-${String(maxNum + 1).padStart(4, '0')}` : 'USR-1001';
     }
 
     const u = {
@@ -1071,12 +1099,12 @@ window.submitAddUser = function() {
     
     const p = window.globalAppData.packages.find(x => x.id === u.packageId);
     
-    // 3. Buat Tagihan Baru yang ID-nya kebal duplikat (menggabungkan ID User + Waktu)
+    // Bikin Tagihan Baru yang aman
     const newBillId = `INV-${userIdValue}-${Date.now().toString().slice(-4)}`;
     
     window.globalAppData.bills.push({ 
         id: newBillId, 
-        userId: userIdValue, // Pasti terisi ID yang benar
+        userId: userIdValue, 
         month: currentMonth, 
         amount: p ? p.price : 150000, 
         status: 'unpaid' 
@@ -1089,49 +1117,6 @@ window.submitAddUser = function() {
     renderData();
 };
 
-        window.selectedUserId = null;
-        window.showUserDetail = function(id) {
-            const u = window.globalAppData.users.find(x => x.id === id);
-            if(!u) return;
-            const p = window.globalAppData.packages.find(x => x.id === u.packageId);
-            document.getElementById('detail-initial').textContent = u.name.charAt(0);
-            document.getElementById('detail-name').textContent = u.name;
-            document.getElementById('detail-id').textContent = 'ID: ' + u.id;
-            document.getElementById('detail-address').textContent = u.address;
-            document.getElementById('detail-phone').textContent = u.phone || '-';
-            document.getElementById('detail-package').textContent = p ? p.name : '-';
-            window.openModal('modal-user-detail');
-        };
-
-        window.showUserOptions = function(id) { window.selectedUserId = id; window.openModal('modal-user-options'); };
-
-        window.openEditUser = function() {
-            window.closeModal('modal-user-options');
-            const u = window.globalAppData.users.find(x => x.id === window.selectedUserId);
-            if(!u) return;
-            document.getElementById('edit-id').value = u.id;
-            document.getElementById('edit-name').value = u.name;
-            document.getElementById('edit-address').value = u.address;
-            document.getElementById('edit-phone').value = u.phone || '';
-            const pkgSel = document.getElementById('edit-pkg');
-            pkgSel.innerHTML = '';
-            window.globalAppData.packages.forEach(p => pkgSel.innerHTML += `<option value="${p.id}" ${p.id===u.packageId?'selected':''}>${p.name}</option>`);
-            setTimeout(() => window.openModal('modal-edit-user'), 300);
-        };
-
-        window.submitEditUser = function() {
-            const u = window.globalAppData.users.find(x => x.id === document.getElementById('edit-id').value);
-            if(!u) return;
-            u.name = document.getElementById('edit-name').value;
-            u.address = document.getElementById('edit-address').value;
-            u.phone = document.getElementById('edit-phone').value;
-            u.packageId = document.getElementById('edit-pkg').value;
-            
-            api.syncUsers();
-            window.showToast('Data diperbarui', 'success');
-            window.closeModal('modal-edit-user');
-            renderData();
-        };
 
         window.deleteSelectedUser = function() {
             window.closeModal('modal-user-options');
