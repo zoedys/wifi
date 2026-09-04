@@ -1083,7 +1083,6 @@ window.submitAddUser = function() {
         }
         userIdValue = maxNum > 0 ? `USR-${String(maxNum + 1).padStart(4, '0')}` : 'USR-1001';
     }
-
     const u = {
         id: userIdValue, 
         name: document.getElementById('add-name').value,
@@ -1093,6 +1092,27 @@ window.submitAddUser = function() {
         username: document.getElementById('add-phone').value, 
         password: '123'
     };
+    window.selectedUserId = null;
+
+window.showUserDetail = function(id) {
+    const u = window.globalAppData.users.find(x => x.id === id);
+    if(!u) return;
+    const p = window.globalAppData.packages.find(x => x.id === u.packageId);
+    
+    document.getElementById('detail-initial').textContent = u.name.charAt(0).toUpperCase();
+    document.getElementById('detail-name').textContent = u.name;
+    document.getElementById('detail-id').textContent = 'ID: ' + u.id;
+    document.getElementById('detail-address').textContent = u.address;
+    document.getElementById('detail-phone').textContent = u.phone || '-';
+    document.getElementById('detail-package').textContent = p ? p.name : '-';
+    
+    window.openModal('modal-user-detail');
+};
+
+window.showUserOptions = function(id) { 
+    window.selectedUserId = id; 
+    window.openModal('modal-user-options'); 
+};
     
     if(!u.name || !u.address) return window.showToast('Lengkapi form', 'error');
     window.globalAppData.users.push(u);
