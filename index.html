@@ -1033,173 +1033,143 @@
                 html2pdf().set(opt).from(printArea).save().then(() => window.showToast('Kwitansi berhasil diunduh!', 'success'));
             } else { window.showToast('Gagal memuat sistem PDF', 'error'); }
         };
+
         window.openAddUserModal = function() {
-    // 1. Bersihkan form terlebih dahulu
-    document.getElementById('form-add-user').reset();
+            document.getElementById('form-add-user').reset();
 
-    // 2. LOGIKA ID BERURUTAN
-    let nextId = "USR-1001"; // Nilai awal jika database masih kosong
-    const users = window.globalAppData.users;
-    
-    if (users && users.length > 0) {
-        let maxNum = 0;
-        users.forEach(u => {
-            // Hanya proses ID yang berawalan "USR-"
-            if (u.id && u.id.startsWith('USR-')) {
-                let num = parseInt(u.id.replace('USR-', ''), 10);
-                if (!isNaN(num) && num > maxNum) maxNum = num;
+            let nextId = "USR-1001";
+            const users = window.globalAppData.users;
+            
+            if (users && users.length > 0) {
+                let maxNum = 0;
+                users.forEach(u => {
+                    if (u.id && u.id.startsWith('USR-')) {
+                        let num = parseInt(u.id.replace('USR-', ''), 10);
+                        if (!isNaN(num) && num > maxNum) maxNum = num;
+                    }
+                });
+                if (maxNum > 0) {
+                    nextId = `USR-${String(maxNum + 1).padStart(4, '0')}`;
+                }
             }
-        });
-        // Jika menemukan angka, tambahkan 1
-        if (maxNum > 0) {
-            nextId = `USR-${String(maxNum + 1).padStart(4, '0')}`;
-        }
-    }
 
-    // 3. Masukkan ID berurutan tersebut ke dalam kotak form
-    document.getElementById('add-id').value = nextId;
+            document.getElementById('add-id').value = nextId;
 
-    const pkgSel = document.getElementById('add-pkg');
-    pkgSel.innerHTML = '';
-    window.globalAppData.packages.forEach(p => pkgSel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
-    window.openModal('modal-add-user');
-};
+            const pkgSel = document.getElementById('add-pkg');
+            pkgSel.innerHTML = '';
+            window.globalAppData.packages.forEach(p => pkgSel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+            window.openModal('modal-add-user');
+        };
 
+        window.submitAddUser = function() {
+            let userIdValue = document.getElementById('add-id').value.trim();
 
-window.submitAddUser = function() {
-    let userIdValue = document.getElementById('add-id').value.trim();
-
-    // BACKUP: Jika kotak ID di HTML terhapus/kosong, buat lagi ID berurutannya di belakang layar
-    if (!userIdValue) {
-        let maxNum = 0;
-        const users = window.globalAppData.users;
-        if (users && users.length > 0) {
-            users.forEach(u => {
-                if (u.id && u.id.startsWith('USR-')) {
-                    let num = parseInt(u.id.replace('USR-', ''), 10);
-                    if (!isNaN(num) && num > maxNum) maxNum = num;
+            if (!userIdValue) {
+                let maxNum = 0;
+                const users = window.globalAppData.users;
+                if (users && users.length > 0) {
+                    users.forEach(u => {
+                        if (u.id && u.id.startsWith('USR-')) {
+                            let num = parseInt(u.id.replace('USR-', ''), 10);
+                            if (!isNaN(num) && num > maxNum) maxNum = num;
+                        }
+                    });
                 }
+                userIdValue = maxNum > 0 ? `USR-${String(maxNum + 1).padStart(4, '0')}` : 'USR-1001';
+            }
+
+            const u = {
+                id: userIdValue, 
+                name: document.getElementById('add-name').value,
+                address: document.getElementById('add-address').value, 
+                phone: document.getElementById('add-phone').value,
+                packageId: document.getElementById('add-pkg').value, 
+                username: document.getElementById('add-phone').value, 
+                password: '123'
+            };
+            
+            if(!u.name || !u.address) return window.showToast('Lengkapi form', 'error');
+            window.globalAppData.users.push(u);
+            
+            const p = window.globalAppData.packages.find(x => x.id === u.packageId);
+            
+            const newBillId = `INV-${userIdValue}-${Date.now().toString().slice(-4)}`;
+            
+            window.globalAppData.bills.push({ 
+                id: newBillId, 
+                userId: userIdValue, 
+                month: currentMonth, 
+                amount: p ? p.price : 150000, 
+                status: 'unpaid' 
             });
-        }
-        userIdValue = maxNum > 0 ? `USR-${String(maxNum + 1).padStart(4, '0')}` : 'USR-1001';
-    }
-    const u = {
-        id: userIdValue, 
-        name: document.getElementById('add-name').value,
-        address: document.getElementById('add-address').value, 
-        phone: document.getElementById('add-phone').value,
-        packageId: document.getElementById('add-pkg').value, 
-        username: document.getElementById('add-phone').value, 
-        password: '123'
-    };
-window.submitAddUser = function() {
-    let userIdValue = document.getElementById('add-id').value.trim();
+            
+            api.syncUsers(); 
+            api.syncBills();
+            window.showToast('Pelanggan ditambah', 'success');
+            window.closeModal('modal-add-user');
+            renderData();
+        };
 
-    if (!userIdValue) {
-        let maxNum = 0;
-        const users = window.globalAppData.users;
-        if (users && users.length > 0) {
-            users.forEach(u => {
-                if (u.id && u.id.startsWith('USR-')) {
-                    let num = parseInt(u.id.replace('USR-', ''), 10);
-                    if (!isNaN(num) && num > maxNum) maxNum = num;
-                }
+        window.selectedUserId = null;
+
+        window.showUserDetail = function(id) {
+            const u = window.globalAppData.users.find(x => x.id === id);
+            if(!u) return;
+            const p = window.globalAppData.packages.find(x => x.id === u.packageId);
+            
+            document.getElementById('detail-initial').textContent = u.name.charAt(0).toUpperCase();
+            document.getElementById('detail-name').textContent = u.name;
+            document.getElementById('detail-id').textContent = 'ID: ' + u.id;
+            document.getElementById('detail-address').textContent = u.address;
+            document.getElementById('detail-phone').textContent = u.phone || '-';
+            document.getElementById('detail-package').textContent = p ? p.name : '-';
+            
+            window.openModal('modal-user-detail');
+        };
+
+        window.showUserOptions = function(id) { 
+            window.selectedUserId = id; 
+            window.openModal('modal-user-options'); 
+        };
+
+        window.openEditUser = function() {
+            window.closeModal('modal-user-options');
+            const u = window.globalAppData.users.find(x => x.id === window.selectedUserId);
+            if(!u) return;
+            document.getElementById('edit-id').value = u.id;
+            document.getElementById('edit-name').value = u.name;
+            document.getElementById('edit-address').value = u.address;
+            document.getElementById('edit-phone').value = u.phone || '';
+            const pkgSel = document.getElementById('edit-pkg');
+            pkgSel.innerHTML = '';
+            window.globalAppData.packages.forEach(p => pkgSel.innerHTML += `<option value="${p.id}" ${p.id===u.packageId?'selected':''}>${p.name}</option>`);
+            setTimeout(() => window.openModal('modal-edit-user'), 300);
+        };
+
+        window.submitEditUser = function() {
+            const u = window.globalAppData.users.find(x => x.id === document.getElementById('edit-id').value);
+            if(!u) return;
+            u.name = document.getElementById('edit-name').value;
+            u.address = document.getElementById('edit-address').value;
+            u.phone = document.getElementById('edit-phone').value;
+            u.packageId = document.getElementById('edit-pkg').value;
+            
+            api.syncUsers();
+            window.showToast('Data diperbarui', 'success');
+            window.closeModal('modal-edit-user');
+            renderData();
+        };
+
+        window.deleteSelectedUser = function() {
+            window.closeModal('modal-user-options');
+            window.openConfirmModal("Hapus Pelanggan", "Tindakan ini tidak dapat dibatalkan.", () => {
+                window.globalAppData.users = window.globalAppData.users.filter(u => u.id !== window.selectedUserId);
+                window.globalAppData.bills = window.globalAppData.bills.filter(b => b.userId !== window.selectedUserId);
+                api.syncUsers(); api.syncBills();
+                renderData();
+                window.showToast('Pelanggan dihapus', 'success');
             });
-        }
-        userIdValue = maxNum > 0 ? `USR-${String(maxNum + 1).padStart(4, '0')}` : 'USR-1001';
-    }
-
-    const u = {
-        id: userIdValue, 
-        name: document.getElementById('add-name').value,
-        address: document.getElementById('add-address').value, 
-        phone: document.getElementById('add-phone').value,
-        packageId: document.getElementById('add-pkg').value, 
-        username: document.getElementById('add-phone').value, 
-        password: '123'
-    };
-    
-    if(!u.name || !u.address) return window.showToast('Lengkapi form', 'error');
-    window.globalAppData.users.push(u);
-    
-    const p = window.globalAppData.packages.find(x => x.id === u.packageId);
-    
-    const newBillId = `INV-${userIdValue}-${Date.now().toString().slice(-4)}`;
-    
-    window.globalAppData.bills.push({ 
-        id: newBillId, 
-        userId: userIdValue, 
-        month: currentMonth, 
-        amount: p ? p.price : 150000, 
-        status: 'unpaid' 
-    });
-    
-    api.syncUsers(); 
-    api.syncBills();
-    window.showToast('Pelanggan ditambah', 'success');
-    window.closeModal('modal-add-user');
-    renderData();
-};
-
-window.selectedUserId = null;
-
-window.showUserDetail = function(id) {
-    const u = window.globalAppData.users.find(x => x.id === id);
-    if(!u) return;
-    const p = window.globalAppData.packages.find(x => x.id === u.packageId);
-    
-    document.getElementById('detail-initial').textContent = u.name.charAt(0).toUpperCase();
-    document.getElementById('detail-name').textContent = u.name;
-    document.getElementById('detail-id').textContent = 'ID: ' + u.id;
-    document.getElementById('detail-address').textContent = u.address;
-    document.getElementById('detail-phone').textContent = u.phone || '-';
-    document.getElementById('detail-package').textContent = p ? p.name : '-';
-    
-    window.openModal('modal-user-detail');
-};
-
-window.showUserOptions = function(id) { 
-    window.selectedUserId = id; 
-    window.openModal('modal-user-options'); 
-};
-
-window.openEditUser = function() {
-    window.closeModal('modal-user-options');
-    const u = window.globalAppData.users.find(x => x.id === window.selectedUserId);
-    if(!u) return;
-    document.getElementById('edit-id').value = u.id;
-    document.getElementById('edit-name').value = u.name;
-    document.getElementById('edit-address').value = u.address;
-    document.getElementById('edit-phone').value = u.phone || '';
-    const pkgSel = document.getElementById('edit-pkg');
-    pkgSel.innerHTML = '';
-    window.globalAppData.packages.forEach(p => pkgSel.innerHTML += `<option value="${p.id}" ${p.id===u.packageId?'selected':''}>${p.name}</option>`);
-    setTimeout(() => window.openModal('modal-edit-user'), 300);
-};
-
-window.submitEditUser = function() {
-    const u = window.globalAppData.users.find(x => x.id === document.getElementById('edit-id').value);
-    if(!u) return;
-    u.name = document.getElementById('edit-name').value;
-    u.address = document.getElementById('edit-address').value;
-    u.phone = document.getElementById('edit-phone').value;
-    u.packageId = document.getElementById('edit-pkg').value;
-    
-    api.syncUsers();
-    window.showToast('Data diperbarui', 'success');
-    window.closeModal('modal-edit-user');
-    renderData();
-};
-
-window.deleteSelectedUser = function() {
-    window.closeModal('modal-user-options');
-    window.openConfirmModal("Hapus Pelanggan", "Tindakan ini tidak dapat dibatalkan.", () => {
-        window.globalAppData.users = window.globalAppData.users.filter(u => u.id !== window.selectedUserId);
-        window.globalAppData.bills = window.globalAppData.bills.filter(b => b.userId !== window.selectedUserId);
-        api.syncUsers(); api.syncBills();
-        renderData();
-        window.showToast('Pelanggan dihapus', 'success');
-    });
+        };
 
         window.renderAdminReports = function() {
             const filterSelect = document.getElementById('report-month-filter');
@@ -1479,6 +1449,63 @@ window.deleteSelectedUser = function() {
                 const count = (window.globalAppData.upgradeRequests || []).length;
                 if (count > 0) badge.classList.remove('hidden'); else badge.classList.add('hidden');
             }
+        };
+
+        window.renderPromos = function() {
+            const promos = window.globalAppData.promos.slice().reverse();
+            const memPromoList = document.getElementById('mem-promo-list');
+            if(memPromoList) {
+                memPromoList.innerHTML = promos.length === 0 ? '<p class="text-xs text-gray-500 text-center py-4">Belum ada info terbaru.</p>' : '';
+                promos.forEach(p => {
+                    memPromoList.innerHTML += `
+                        <div class="bg-gradient-to-r from-orange-50 to-white border border-orange-100 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-brimo-orange"></div>
+                            <span class="text-[10px] font-bold text-brimo-orange bg-orange-100 px-2 py-0.5 rounded-md mb-2 inline-block">${p.date}</span>
+                            <h4 class="font-bold text-gray-800 text-sm mb-1">${p.title}</h4>
+                            <p class="text-xs text-gray-600 leading-relaxed">${p.desc}</p>
+                        </div>
+                    `;
+                });
+            }
+            const adminPromoList = document.getElementById('admin-promo-list');
+            if(adminPromoList) {
+                adminPromoList.innerHTML = promos.length === 0 ? '<p class="text-xs text-gray-500 text-center py-10">Belum ada promo.</p>' : '';
+                promos.forEach(p => {
+                    adminPromoList.innerHTML += `
+                        <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm relative">
+                            <div class="flex justify-between items-start mb-2">
+                                <div><span class="text-[10px] font-bold text-gray-500 mb-1 inline-block">${p.date}</span><h4 class="font-bold text-gray-800 text-sm">${p.title}</h4></div>
+                                <button onclick="window.deletePromo('${p.id}')" class="w-8 h-8 bg-red-50 text-red-500 rounded-full flex items-center justify-center hover:bg-red-100 transition"><i class="fa-solid fa-trash text-xs"></i></button>
+                            </div>
+                            <p class="text-xs text-gray-600">${p.desc}</p>
+                        </div>
+                    `;
+                });
+            }
+        };
+
+        window.submitPromo = function() {
+            const title = document.getElementById('promo-title').value.trim();
+            const desc = document.getElementById('promo-desc').value.trim();
+            if(!title || !desc) return window.showToast('Harap lengkapi form', 'error');
+            const now = new Date();
+            const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+            window.globalAppData.promos.push({ id: 'prm-' + Date.now(), title, desc, date: `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}` });
+            
+            api.syncPromos();
+            window.showToast('Info/Promo berhasil disebarkan!', 'success');
+            window.closeModal('modal-add-promo');
+            document.getElementById('form-add-promo').reset();
+            window.renderPromos();
+        };
+
+        window.deletePromo = function(id) {
+            window.openConfirmModal("Hapus Promo", "Promo ini akan hilang dari beranda pelanggan.", () => {
+                window.globalAppData.promos = window.globalAppData.promos.filter(p => p.id !== id);
+                api.syncPromos();
+                window.renderPromos();
+                window.showToast('Promo dihapus', 'success');
+            });
         };
 
         window.openBantuan = function() { window.openModal('modal-bantuan'); };
