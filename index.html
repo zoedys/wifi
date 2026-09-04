@@ -1052,7 +1052,8 @@
             if(!u.name || !u.address) return window.showToast('Lengkapi form', 'error');
             window.globalAppData.users.push(u);
             const p = window.globalAppData.packages.find(x => x.id === u.packageId);
-            window.globalAppData.bills.push({ id: `INV-${Date.now().toString().slice(-6)}`, userId: u.id, month: currentMonth, amount: p ? p.price : 150000, status: 'unpaid' });
+            // Menambahkan u.id agar setiap ID tagihan otomatis unik untuk tiap orang
+            window.globalAppData.bills.push({ id: `INV-${u.id}-${Date.now().toString().slice(-4)}`, userId: u.id, month: currentMonth, amount: p ? p.price : 150000, status: 'unpaid' });
             
             api.syncUsers(); api.syncBills();
             window.showToast('Pelanggan ditambah', 'success');
